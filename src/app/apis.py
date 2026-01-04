@@ -20,15 +20,23 @@ def api_process():
             try:
                 # pinfo = proc.as_dict(attrs=['pid', 'name', 'num_handles', 'num_threads', 'memory_percent', 'cpu_times'])
                 pinfo = proc.as_dict(
-                    attrs=["pid", "name", "memory_percent", "num_threads", "cpu_times"]
+                    attrs=["pid", "name", "memory_percent", "num_threads", "cpu_times"],
+                    ad_value=None,
                 )
-            except psutil.NoSuchProcess:
-                pass
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                continue
             else:
+                if not pinfo.get("name"):
+                    continue
+                if pinfo.get("memory_percent") is None:
+                    pinfo["memory_percent"] = 0.0
                 apidata["processes"].append(pinfo)
     except Exception:
         pass
 
+    apidata["processes"].sort(
+        key=lambda proc: proc.get("memory_percent", 0.0), reverse=True
+    )
     return jsonify(apidata)
 
 
